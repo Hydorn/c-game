@@ -165,11 +165,14 @@ void draw_rays(int x0, int y0, double angle) {
             collition_y = y0 + (sin(rayAngle)<0? 1:-1) * sqrt(ray_length*ray_length - fabs(collition_x-x0)*fabs(collition_x-x0));
         }
 
+        //Upgraded ray_length to fix cat_eye effect
+        float ray_length2 = ray_length * cos(angle-rayAngle);
+
         // Render ray with collition
         SDL_RenderDrawLine(renderer, x0,y0,collition_x,collition_y);
         // printf("i: %d \n",i);
         // SDL_Rect pinche = {SCREEN_WIDTH/2+i,0,1,SCREEN_WIDTH/2};
-        float line_height = ray_length==0? SCREEN_HEIGHT: SCREEN_HEIGHT/(ray_length/100); 
+        float line_height = ray_length==0? SCREEN_HEIGHT: SCREEN_HEIGHT/(ray_length2/100); 
         SDL_SetRenderDrawColor(renderer,0,255,0,255/(line_height)); 
         SDL_RenderDrawLineF(renderer,SCREEN_WIDTH/2+i,(SCREEN_HEIGHT/2)-line_height/2,SCREEN_WIDTH/2+i,(SCREEN_HEIGHT/2)+line_height/2);
         rayAngle = rayAngle - rayAngleIncrement;
@@ -242,6 +245,15 @@ int main(){
 		SDL_RenderClear(renderer);
 		draw_map();
 
+        // Draw floor and ceiling
+        SDL_Rect ceiling = {SCREEN_WIDTH/2,0, SCREEN_WIDTH/2,SCREEN_HEIGHT};
+        SDL_Rect floor = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2,SCREEN_WIDTH/2,SCREEN_HEIGHT/2};
+
+		SDL_SetRenderDrawColor(renderer,110,190,255,255);
+        SDL_RenderFillRect(renderer,&ceiling);
+
+		SDL_SetRenderDrawColor(renderer,175,255,115,255);
+        SDL_RenderFillRect(renderer,&floor);
 
 		//Draw player -5 so middle poit is the center
 	    SDL_Rect player = {game_player.pos.x-5,game_player.pos.y-5,10,10};
