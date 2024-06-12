@@ -20,7 +20,7 @@ static ui8 MAP[MAP_SIZE * MAP_SIZE] = {
     1,0,0,0,0,1,0,0,0,1,
     1,0,0,0,0,0,0,0,0,1,
     1,0,0,0,0,0,0,0,0,1,
-    1,1,1,1,1,0,0,0,0,1,
+    1,1,1,1,0,0,0,0,0,1,
     1,0,0,0,0,0,0,0,0,1,
     1,0,0,0,0,0,1,0,0,1,
     1,0,0,0,0,0,0,0,0,1,
@@ -31,15 +31,15 @@ SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 
 void draw_map(){
-	for(int y=0; y<MAP_SIZE; y++){
-		for(int x=0; x<MAP_SIZE; x++){
-			ui8 cell = MAP[y * MAP_SIZE + x];
-			SDL_Rect rect = { x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE-1, CELL_SIZE-1};
+    for(int y=0; y<MAP_SIZE; y++){
+        for(int x=0; x<MAP_SIZE; x++){
+            ui8 cell = MAP[y * MAP_SIZE + x];
+            SDL_Rect rect = { x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE-1, CELL_SIZE-1};
 
-			SDL_SetRenderDrawColor(renderer,255*cell,255*cell,255*cell,255);
-			SDL_RenderFillRect(renderer,&rect);
-		}
-	}
+            SDL_SetRenderDrawColor(renderer,255*cell,255*cell,255*cell,255);
+            SDL_RenderFillRect(renderer,&rect);
+        }
+    }
 }
 
 struct position {
@@ -71,18 +71,83 @@ void draw_pos_ray(int x0, int y0, double angle){
     SDL_RenderDrawLineF(renderer,x0,y0,x,y);
 }
 
+// x0 and y0 are player position
 void draw_rays(int x0, int y0, double angle) {
     int size = 10000;
-    int rays = 2;
-    float rayAngle = angle + PI/6;
-    float rayAngleIncrement = (PI/3) / rays;
+    int rays = 1;
+    // float rayAngle = angle + PI/6;
+    // float rayAngleIncrement = (PI/3) / rays
+    float rayAngle = angle;
 
-    for (int i = 0; i <= rays; i++) { 
+    for (int i = 0; i < rays; i++) { 
         float x = cos(-1*rayAngle) * size + x0;
         float y = sin(-1*rayAngle) * size + y0;
-        SDL_RenderDrawLine(renderer, x0 , y0 , x, y); // Draw the ray
-        printf("rayAngle: %f \n", rayAngle);
-        rayAngle = rayAngle - rayAngleIncrement;
+
+        // initial pos in grid
+        int map_x = x0 / CELL_SIZE;
+        int map_y = y0 / CELL_SIZE;
+
+        // initial dif to the next grid
+        int dx, dy;
+
+        // unit hypotenuse variation
+        float hyp_dx = fabs(CELL_SIZE/cos(rayAngle));
+        float hyp_dy = fabs(CELL_SIZE/sin(rayAngle));
+
+        // in which position are we moving
+        int step_x, step_y;
+        float h_dx, h_dy;
+
+        // initialization
+        if (cos(rayAngle) > 0) {
+            step_x = 1;
+            dx = (map_x + 1) * (step_x * CELL_SIZE) - x0;
+            h_dx = fabs(dx/cos(rayAngle));
+        } else {
+            step_x = -1;
+            dx = x0 - map_x * CELL_SIZE;
+            h_dx = fabs(dx/cos(PI-rayAngle));
+
+        }
+
+        if (sin(rayAngle) > 0) {
+            step_y = -1;
+            dy = y0 - map_y * CELL_SIZE ;
+            h_dy = fabs(dy/sin(rayAngle));
+        } else {
+            step_y = 1;
+            dy = (map_y + 1) * CELL_SIZE  - y0;
+            h_dy = fabs(dy/sin(PI-rayAngle));
+
+        }
+
+        int hit = 0;
+        int i = 0;
+        
+         while (!hit && i < 100) {          
+            if (h_dx < h_dy) {
+                map_x += step_x;
+                h_dx += hyp_dx;
+                
+            } else {
+                map_y += step_y;
+                h_dy += hyp_dy; 
+            }
+
+            i++;
+            if (MAP[map_y * MAP_SIZE + map_x] == 1) {
+                printf("collition found on block x: %d - y: %d \n", map_x, map_y);
+                hit = 1;
+            } 
+        }
+
+        SDL_RenderDrawLine(renderer,x0,y0,x0+(step_x*dx),y0);
+        SDL_RenderDrawLine(renderer,x0,y0,x0,y0+(step_y*dy));
+        SDL_RenderDrawLine(renderer, x0 , y0 , x,y); // Draw the ray
+
+        SDL_SetRenderDrawColor(renderer,255,255,0,255);
+        SDL_SetRenderDrawColor(renderer,255,0,255,255);
+        // rayAngle = rayAngle - rayAngleIncrement;
     }
 }
 
@@ -141,11 +206,7 @@ int main(){
                 case SDL_MOUSEMOTION:
                     game_player.player_cam.camera_pos.x = event.motion.x;
                     game_player.player_cam.camera_pos.y = event.motion.y;
-                    printf("camera x: %d - camera y: %d \n",event.motion.x,event.motion.y);
-                    printf("player x: %d - player y: %d \n",game_player.pos.x,game_player.pos.y);
                     calc_cam_angle(&game_player.player_cam.angle, game_player.pos.x,game_player.pos.y, event.motion.x, event.motion.y);
-
-                    printf("the angle is : %f", game_player.player_cam.angle);
                     break;
 				default:
 					break;

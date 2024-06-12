@@ -64,167 +64,181 @@ void calc_cam_angle(double *angle, int x0, int y0, int x1, int y1) {
 }
 
 void draw_pos_ray(int x0, int y0, double angle){
-    int size = 100;
+    int size = 1000;
     float x,y;
     x = cos(-1*angle) *size + x0;
     y = sin(-1*angle) *size + y0;
-    SDL_RenderDrawLineF(renderer,x0+5,y0+5,x,y);
+    SDL_RenderDrawLineF(renderer,x0,y0,x,y);
 }
 
 // x0 and y0 are player position
 void draw_rays(int x0, int y0, double angle) {
     int size = 10000;
     int rays = 1;
-    float rayAngleIncrement = 2.0 / rays;
+    // float rayAngle = angle + PI/6;
+    // float rayAngleIncrement = (PI/3) / rays
+    float rayAngle = angle;
 
     for (int i = 0; i < rays; i++) { 
-        float rayAngle = (angle - 0.5) + (i * rayAngleIncrement);
-        float x = cos(rayAngle) * size + x0;
-        float y = sin(rayAngle) * size + y0;
+        float x = cos(-1*rayAngle) * size + x0;
+        float y = sin(-1*rayAngle) * size + y0;
 
-        // Flag for collision check
-        int hit = 0;
+        // initial pos in grid
+        int map_x = x0 / CELL_SIZE;
+        int map_y = y0 / CELL_SIZE;
 
-        // Determine initial position in the map
-        int mapX = x0 / CELL_SIZE;
-        int mapY = y0 / CELL_SIZE;
+        // initial dif to the next grid
+        int dx, dy;
 
-        // Determine needed change in x-y to move one unit in axis
-        float unitDx = fabs(1 / cos(rayAngle));
-        float unitDy = fabs(1 / sin(rayAngle));
+        // unit hypotenuse variation
+        float hyp_dx = fabs(CELL_SIZE/cos(rayAngle));
+        float hyp_dy = fabs(CELL_SIZE/sin(rayAngle));
 
-        // Variables for accumulative x and y values
-        float lengthX, lengthY;
-        int stepX, stepY; 
-        float hipX, hipY;
-    
-        // Initialization
+        printf("hyp_dx: %f - hyp_dy: %f\n", hyp_dx,hyp_dy);
+        // in which position are we moving
+        int step_x, step_y;
+        float h_dx, h_dy;
+
+        // initialization
         if (cos(rayAngle) > 0) {
-            stepX = 1;
-            // initial dx 
-            lengthX = (mapX + 1) * CELL_SIZE - x0;
+            step_x = 1;
+            dx = (map_x + 1) * (step_x * CELL_SIZE) - x0;
+            h_dx = fabs(dx/cos(rayAngle));
         } else {
-            stepX = -1;
-            lengthX = x0 - mapX * CELL_SIZE;
+            step_x = -1;
+            dx = x0 - map_x * CELL_SIZE;
+            h_dx = fabs(dx/cos(PI-rayAngle));
+
         }
-        hipX = fabs(lengthX/sin(rayAngle));
 
         if (sin(rayAngle) > 0) {
-            stepY = -1;
-            lengthY = y0 - mapY * CELL_SIZE;
+            step_y = -1;
+            dy = y0 - map_y * CELL_SIZE ;
+            h_dy = fabs(dy/sin(rayAngle));
         } else {
-            stepY = +1;
-            lengthY = (mapY + 1) * CELL_SIZE - y0;
+            step_y = 1;
+            dy = (map_y + 1) * CELL_SIZE  - y0;
+            h_dy = fabs(dy/sin(PI-rayAngle));
+
         }
-        hipY = fabs(lengthY/cos(rayAngle));
+
+        int hit = 0;
+        int i = 0;
         
-
-        while (!hit) { 
-            if (hipX < hipY) {
-                mapX += stepX;
-                lengthX += (stepX * CELL_SIZE);
-                hipX += unitDx;
+         while (!hit && i < 100) { 
+            SDL_Rect hit_rect = {CELL_SIZE*map_x,CELL_SIZE*map_y,CELL_SIZE,CELL_SIZE};
+            SDL_RenderFillRect(renderer,&hit_rect);
+            
+            if (h_dx < h_dy) {
+                map_x += step_x;
+                h_dx += hyp_dx;
+                SDL_SetRenderDrawColor(renderer, 255,125,125,255);
             } else {
-                mapY += stepY;
-                lengthY += (stepY * CELL_SIZE);
-                hipY += unitDy;
+                map_y += step_y;
+                h_dy += hyp_dy;
+                SDL_SetRenderDrawColor(renderer, 0,125,125,255);
             }
 
-            if (MAP[mapY * MAP_SIZE + mapX] == 1) {
+            // -> STEP INITIALIZATION CHECKED
+            // -> hyp_dx/dy CHECKED
+
+            i++;
+            if (MAP[map_y * MAP_SIZE + map_x] == 1) {
+                printf("collition found on block x: %d - y: %d \n", map_x, map_y);
                 hit = 1;
-            }
+            } 
         }
 
+        SDL_RenderDrawLine(renderer,x0,y0,x0+(step_x*dx),y0);
+        SDL_RenderDrawLine(renderer,x0,y0,x0,y0+(step_y*dy));
 
-        SDL_RenderDrawLine(renderer, x0 + 5, y0 + 5, lengthX, lengthY); // Draw the ray
+        SDL_RenderDrawLine(renderer, x0 , y0 , x,y); // Draw the ray
+        // rayAngle = rayAngle - rayAngleIncrement;
     }
 }
 
 int main(){
     //Initialize windows and renderer
-    SDL_Init(SDL_INIT_VIDEO);
+	SDL_Init(SDL_INIT_VIDEO);
     window = SDL_CreateWindow("2D Map", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    
+	
+	
     //Create + init player
     struct player game_player;
     game_player.pos.x =  SCREEN_WIDTH/4;
     game_player.pos.y = SCREEN_HEIGHT/4;
-        
-    //Create event and game loop
-    SDL_Event event;
-    while(1){
+		
+    //Crete event and game loop
+	SDL_Event event;
+	while(1){
 
-        while(SDL_PollEvent(&event)){
-            switch(event.type){
-                case SDL_QUIT:
-                    exit(0);
-                    break;
+		while(SDL_PollEvent(&event)){
+			switch(event.type){
+				case SDL_QUIT:
+					exit(0);
+					break;
 
-                case SDL_KEYDOWN:
-                    printf("current cell:  x:  %d - y: %d \n", game_player.pos.x/CELL_SIZE, game_player.pos.y/CELL_SIZE );
-                    switch(event.key.keysym.sym){
-                        case SDLK_RIGHT:
-                        case SDLK_d:
+				case SDL_KEYDOWN:
+                    
+					switch(event.key.keysym.sym){
+						case SDLK_RIGHT:
+                        case SDLK_a:
                             game_player.pos.x += 10;
                             game_player.player_cam.camera_pos.x += 10;
-                            break;
-                        case SDLK_LEFT:
-                        case SDLK_a:
+							break;
+						case SDLK_LEFT:
+                        case SDLK_d:
                             game_player.pos.x -= 10;
                             game_player.player_cam.camera_pos.x -= 10;
-                            break;
-                        case SDLK_UP:
-                        case SDLK_w:
-                            game_player.pos.y -= 10;
+							break;
+						case SDLK_UP:
+						case SDLK_w:
+							game_player.pos.y -= 10;
                             game_player.player_cam.camera_pos.y -= 10;
-                            break;
-                        case SDLK_DOWN:
-                        case SDLK_s:
-                            game_player.pos.y += 10;
+							break;
+						case SDLK_DOWN:
+						case SDLK_s:
+							game_player.pos.y += 10;
                             game_player.player_cam.camera_pos.y += 10; 
-                            break;
-                        case SDLK_ESCAPE:
-                            exit(0);
-                            break;
-                        default:
-                            break;
-                    }
-                    break;
+							break;
+						case SDLK_ESCAPE:
+							exit(0);
+							break;
+						default:
+							break;
+					}
+					break;
                 case SDL_MOUSEMOTION:
                     game_player.player_cam.camera_pos.x = event.motion.x;
                     game_player.player_cam.camera_pos.y = event.motion.y;
-                    printf("camera x: %d - camera y: %d \n",event.motion.x,event.motion.y);
-                    printf("player x: %d - player y: %d \n",game_player.pos.x,game_player.pos.y);
                     calc_cam_angle(&game_player.player_cam.angle, game_player.pos.x,game_player.pos.y, event.motion.x, event.motion.y);
-
-                    printf("the angle is : %f", game_player.player_cam.angle);
                     break;
-                default:
-                    break;
-            }
-        }
+				default:
+					break;
+			}
+		}
 
         // Draw map
-        SDL_SetRenderDrawColor(renderer,255,125,0,255);
-        SDL_RenderClear(renderer);
-        draw_map();
+		SDL_SetRenderDrawColor(renderer,255,125,0,255);
+		SDL_RenderClear(renderer);
+		draw_map();
 
 
-        //Draw player
-        SDL_Rect player = {game_player.pos.x,game_player.pos.y,10,10};
-        SDL_SetRenderDrawColor(renderer,255,125,0,255);
-        SDL_RenderFillRect(renderer,&player);
+		//Draw player -5 so middle poit is the center
+	    SDL_Rect player = {game_player.pos.x-5,game_player.pos.y-5,10,10};
+		SDL_SetRenderDrawColor(renderer,255,125,0,255);
+		SDL_RenderFillRect(renderer,&player);
 
         //Draw Ray
-        SDL_SetRenderDrawColor(renderer,255,0,0,255);
+		SDL_SetRenderDrawColor(renderer,255,0,0,255);
         draw_pos_ray(game_player.pos.x,game_player.pos.y, game_player.player_cam.angle);
 
-        SDL_SetRenderDrawColor(renderer,0,255,0,255);
+		SDL_SetRenderDrawColor(renderer,0,255,0,255);
         draw_rays(game_player.pos.x,game_player.pos.y, game_player.player_cam.angle);
 
-        SDL_RenderPresent(renderer);
-        SDL_Delay(100);
-    }
-    return 0;
+		SDL_RenderPresent(renderer);
+        SDL_Delay(10);
+	}
+	return 0;
 }
