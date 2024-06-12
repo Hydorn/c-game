@@ -57,6 +57,8 @@ struct player {
 void calc_cam_angle(double *angle, int x0, int y0, int x1, int y1) {
     // Calculate the angle between the two points
     *angle = atan2(-1*(y1 - y0), x1 - x0); 
+    int x = fabs(x1-x0);
+    int y = fabs(y1-y0);
 
     if (*angle < 0) {
         *angle += 2*PI;
@@ -64,7 +66,7 @@ void calc_cam_angle(double *angle, int x0, int y0, int x1, int y1) {
 }
 
 void draw_pos_ray(int x0, int y0, double angle){
-    int size = 1000;
+    int size = 100;
     float x,y;
     x = cos(-1*angle) *size + x0;
     y = sin(-1*angle) *size + y0;
@@ -73,16 +75,11 @@ void draw_pos_ray(int x0, int y0, double angle){
 
 // x0 and y0 are player position
 void draw_rays(int x0, int y0, double angle) {
-    int size = 10000;
-    int rays = 1;
-    // float rayAngle = angle + PI/6;
-    // float rayAngleIncrement = (PI/3) / rays
-    float rayAngle = angle;
+    int rays = 200;
+    float rayAngle = angle + PI/6;
+    float rayAngleIncrement = (PI/3) / rays;
 
-    for (int i = 0; i < rays; i++) { 
-        float x = cos(-1*rayAngle) * size + x0;
-        float y = sin(-1*rayAngle) * size + y0;
-
+    for (int i = 0; i <= rays; i++) { 
         // initial pos in grid
         int map_x = x0 / CELL_SIZE;
         int map_y = y0 / CELL_SIZE;
@@ -118,36 +115,59 @@ void draw_rays(int x0, int y0, double angle) {
             step_y = 1;
             dy = (map_y + 1) * CELL_SIZE  - y0;
             h_dy = fabs(dy/sin(PI-rayAngle));
-
         }
 
         int hit = 0;
         int i = 0;
+
+        // Var to check wich side was updated last.
+        int side = 0;
         
          while (!hit && i < 100) {          
             if (h_dx < h_dy) {
                 map_x += step_x;
                 h_dx += hyp_dx;
-                
+                side = 0;
             } else {
                 map_y += step_y;
                 h_dy += hyp_dy; 
+                side = 1;
             }
 
             i++;
+
             if (MAP[map_y * MAP_SIZE + map_x] == 1) {
-                printf("collition found on block x: %d - y: %d \n", map_x, map_y);
                 hit = 1;
             } 
         }
 
-        SDL_RenderDrawLine(renderer,x0,y0,x0+(step_x*dx),y0);
-        SDL_RenderDrawLine(renderer,x0,y0,x0,y0+(step_y*dy));
-        SDL_RenderDrawLine(renderer, x0 , y0 , x,y); // Draw the ray
+        float collition_x, collition_y;
+        float ray_length;
 
-        SDL_SetRenderDrawColor(renderer,255,255,0,255);
-        SDL_SetRenderDrawColor(renderer,255,0,255,255);
-        // rayAngle = rayAngle - rayAngleIncrement;
+        if(side){
+            if(sin(rayAngle)<0){
+                collition_y = map_y * CELL_SIZE;
+            } else {
+                collition_y = (map_y + 1) * CELL_SIZE;
+            }
+
+            ray_length = fabs(collition_y-y0) / sin(rayAngle);
+            collition_x = x0 + (cos(rayAngle)<0? -1:1) *  sqrt(ray_length*ray_length - fabs(collition_y-y0)*fabs(collition_y-y0));
+            
+        } else {
+            if(cos(rayAngle)>0){
+                collition_x = map_x * CELL_SIZE;
+            } else {
+                collition_x = (map_x + 1) * CELL_SIZE;
+            }
+
+            ray_length = fabs(collition_x-x0) / cos(rayAngle);
+            collition_y = y0 + (sin(rayAngle)<0? 1:-1) * sqrt(ray_length*ray_length - fabs(collition_x-x0)*fabs(collition_x-x0));
+        }
+
+        // Render ray with collition
+        SDL_RenderDrawLine(renderer, x0,y0,collition_x,collition_y);
+        rayAngle = rayAngle - rayAngleIncrement;
     }
 }
 
