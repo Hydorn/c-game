@@ -170,10 +170,8 @@ void draw_rays(int x0, int y0, double angle) {
 
         // Render ray with collition
         SDL_RenderDrawLine(renderer, x0,y0,collition_x,collition_y);
-        // printf("i: %d \n",i);
-        // SDL_Rect pinche = {SCREEN_WIDTH/2+i,0,1,SCREEN_WIDTH/2};
         float line_height = ray_length==0? SCREEN_HEIGHT: SCREEN_HEIGHT/(ray_length2/100); 
-        SDL_SetRenderDrawColor(renderer,0,255,0,255/(line_height)); 
+        SDL_SetRenderDrawColor(renderer,0,side ? 255 : 155,0,0); 
         SDL_RenderDrawLineF(renderer,SCREEN_WIDTH/2+i,(SCREEN_HEIGHT/2)-line_height/2,SCREEN_WIDTH/2+i,(SCREEN_HEIGHT/2)+line_height/2);
         rayAngle = rayAngle - rayAngleIncrement;
     }
