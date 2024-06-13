@@ -75,7 +75,7 @@ void draw_pos_ray(int x0, int y0, double angle){
 
 // x0 and y0 are player position
 void draw_rays(int x0, int y0, double angle) {
-    int rays = 600;
+    int rays = 50;
     float rayAngle = angle + PI/6;
     float rayAngleIncrement = (PI/3) / rays;
 
@@ -170,9 +170,15 @@ void draw_rays(int x0, int y0, double angle) {
 
         // Render ray with collition
         SDL_RenderDrawLine(renderer, x0,y0,collition_x,collition_y);
+
+        //Render 3D
         float line_height = ray_length==0? SCREEN_HEIGHT: SCREEN_HEIGHT/(ray_length2/100); 
+        int tile_width = ceil((SCREEN_WIDTH/2)/(float)rays);
+        SDL_Rect tile = {SCREEN_HEIGHT+(i*tile_width),(SCREEN_HEIGHT-line_height)/2,tile_width,line_height};
         SDL_SetRenderDrawColor(renderer,0,side ? 255 : 155,0,0); 
-        SDL_RenderDrawLineF(renderer,SCREEN_WIDTH/2+i,(SCREEN_HEIGHT/2)-line_height/2,SCREEN_WIDTH/2+i,(SCREEN_HEIGHT/2)+line_height/2);
+        SDL_RenderFillRect(renderer, &tile);
+
+        //Increment rayAngle for next iteration
         rayAngle = rayAngle - rayAngleIncrement;
     }
 }
@@ -259,14 +265,13 @@ int main(){
 		SDL_RenderFillRect(renderer,&player);
 
         //Draw Ray
-		SDL_SetRenderDrawColor(renderer,255,0,0,255);
         draw_pos_ray(game_player.pos.x,game_player.pos.y, game_player.player_cam.angle);
 
 		SDL_SetRenderDrawColor(renderer,0,255,0,255);
         draw_rays(game_player.pos.x,game_player.pos.y, game_player.player_cam.angle);
 
 		SDL_RenderPresent(renderer);
-        SDL_Delay(10);
+        SDL_Delay(1);
 	}
 	return 0;
 }
