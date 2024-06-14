@@ -271,7 +271,6 @@ int main(){
         draw_rays(game_player.pos.x,game_player.pos.y, game_player.player_cam.angle);
 
 		SDL_RenderPresent(renderer);
-        SDL_Delay(1);
 	}
 	return 0;
 }
