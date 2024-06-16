@@ -68,7 +68,7 @@ void rotate_line(struct line *x, int angle) {
     x->angle = (x->angle + angle) % 360; // Update the angle and keep it within [0, 360)
 
     // Convert the angle to radians
-    double radians = x->angle * M_PI / 180.0;
+    double radians = x->angle * PI / 180.0;
 
     // Calculate the new endpoint (x1, y1) based on the rotation
     x->x1 = x->x0 + (int)(x->length * cos(radians));

@@ -35,7 +35,7 @@ int main(){
     SDL_Renderer *renderer = NULL;
     SDL_Texture *window_text = NULL;
     SDL_Rect playerRect;
-    SDL_Rect playerPos = {0,0,32,32};
+    SDL_Rect playerPos = {300,300,64,64};
     int frameWidth, frameHeight;
     int textureWidth, textureHeight;
 

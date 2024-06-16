@@ -29,18 +29,7 @@ static ui8 MAP[MAP_SIZE * MAP_SIZE] = {
 
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
-
-void draw_map(){
-    for(int y=0; y<MAP_SIZE; y++){
-        for(int x=0; x<MAP_SIZE; x++){
-            ui8 cell = MAP[y * MAP_SIZE + x];
-            SDL_Rect rect = { x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE-1, CELL_SIZE-1};
-
-            SDL_SetRenderDrawColor(renderer,255*cell,255*cell,255*cell,255);
-            SDL_RenderFillRect(renderer,&rect);
-        }
-    }
-}
+SDL_Texture* wallTexture = NULL;
 
 struct position {
     int x,y;
@@ -54,6 +43,37 @@ struct player {
     struct camera player_cam;
 };
 
+SDL_Texture* LoadTexture(const char filename[], SDL_Renderer* renderTarget) {
+    SDL_Texture* texture = NULL;
+    SDL_Surface* surface = NULL;
+
+    surface = SDL_LoadBMP(filename);
+    if (!surface) {
+        printf("SDL_LoadBMP Error: %s\n", SDL_GetError());
+        return NULL;
+    }
+
+    texture = SDL_CreateTextureFromSurface(renderTarget, surface);
+    if (!texture) {
+        printf("SDL_CreateTextureFromSurface Error: %s\n", SDL_GetError());
+    }
+    SDL_FreeSurface(surface);  // Free the surface after creating the texture
+
+    return texture;
+}
+
+void draw_map(){
+    for(int y=0; y<MAP_SIZE; y++){
+        for(int x=0; x<MAP_SIZE; x++){
+            ui8 cell = MAP[y * MAP_SIZE + x];
+            SDL_Rect rect = { x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE-1, CELL_SIZE-1};
+
+            SDL_SetRenderDrawColor(renderer,255*cell,255*cell,255*cell,255);
+            SDL_RenderFillRect(renderer,&rect);
+        }
+    }
+}
+
 void calc_cam_angle(double *angle, int x0, int y0, int x1, int y1) {
     // Calculate the angle between the two points
     *angle = atan2(-1*(y1 - y0), x1 - x0); 
@@ -65,21 +85,13 @@ void calc_cam_angle(double *angle, int x0, int y0, int x1, int y1) {
     }
 }
 
-void draw_pos_ray(int x0, int y0, double angle){
-    int size = 100;
-    float x,y;
-    x = cos(-1*angle) *size + x0;
-    y = sin(-1*angle) *size + y0;
-    SDL_RenderDrawLineF(renderer,x0,y0,x,y);
-}
-
 // x0 and y0 are player position
-void draw_rays(int x0, int y0, double angle) {
-    int rays = 600;
+void ray_cast(int x0, int y0, double angle, SDL_Texture * texture) {
+    int rays = 200;
     float rayAngle = angle + PI/6;
     float rayAngleIncrement = (PI/3) / rays;
-
-    for (int i = 0; i <= rays; i++) { 
+    int texture_dx= 0;
+    for (int i = 0; i < rays; i++) { 
         // initial pos in grid
         int map_x = x0 / CELL_SIZE;
         int map_y = y0 / CELL_SIZE;
@@ -171,14 +183,20 @@ void draw_rays(int x0, int y0, double angle) {
         // Render ray with collition
         SDL_RenderDrawLine(renderer, x0,y0,collition_x,collition_y);
 
+        //Handle Texture
+        int textureWidth, textureHeight;
+        SDL_QueryTexture(wallTexture,NULL,NULL,&textureWidth,&textureHeight);
+        if(texture_dx==textureWidth) texture_dx = 0;
+
         //Render 3D
-        float line_height = ray_length==0? SCREEN_HEIGHT: SCREEN_HEIGHT/(ray_length2/100); 
+        float line_height = ray_length==0? SCREEN_HEIGHT: fabs(SCREEN_HEIGHT/(ray_length2/100)); 
         int tile_width = ceil((SCREEN_WIDTH/2)/(float)rays);
+        SDL_Rect showing_wall = {texture_dx,0,tile_width,textureHeight};
         SDL_Rect tile = {SCREEN_HEIGHT+(i*tile_width),(SCREEN_HEIGHT-line_height)/2,tile_width,line_height};
-        SDL_SetRenderDrawColor(renderer,0,side ? 255 : 155,0,0); 
-        SDL_RenderFillRect(renderer, &tile);
+        SDL_RenderCopy(renderer,texture,&showing_wall,&tile);
 
         //Increment rayAngle for next iteration
+        texture_dx++;
         rayAngle = rayAngle - rayAngleIncrement;
     }
 }
@@ -188,9 +206,8 @@ int main(){
 	SDL_Init(SDL_INIT_VIDEO);
     window = SDL_CreateWindow("2D Map", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	
-	
-    //Create + init player
+	wallTexture = LoadTexture("block.bmp",renderer);
+
     struct player game_player;
     game_player.pos.x =  SCREEN_WIDTH/8;
     game_player.pos.y = SCREEN_HEIGHT/4;
@@ -245,32 +262,20 @@ int main(){
 		}
 
         // Draw map
-		SDL_SetRenderDrawColor(renderer,255,125,0,255);
-		SDL_RenderClear(renderer);
+		// SDL_RenderClear(renderer);
 		draw_map();
 
         // Draw floor and ceiling
         SDL_Rect ceiling = {SCREEN_WIDTH/2,0, SCREEN_WIDTH/2,SCREEN_HEIGHT};
         SDL_Rect floor = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2,SCREEN_WIDTH/2,SCREEN_HEIGHT/2};
-
 		SDL_SetRenderDrawColor(renderer,110,190,255,255);
         SDL_RenderFillRect(renderer,&ceiling);
-
 		SDL_SetRenderDrawColor(renderer,175,255,115,255);
         SDL_RenderFillRect(renderer,&floor);
+        
 
-		//Draw player -5 so middle poit is the center
-	    SDL_Rect player = {game_player.pos.x-5,game_player.pos.y-5,10,10};
-		SDL_SetRenderDrawColor(renderer,255,125,0,255);
-		SDL_RenderFillRect(renderer,&player);
-
-        //Draw Ray
-        draw_pos_ray(game_player.pos.x,game_player.pos.y, game_player.player_cam.angle);
-
-		SDL_SetRenderDrawColor(renderer,0,255,0,255);
-        draw_rays(game_player.pos.x,game_player.pos.y, game_player.player_cam.angle);
-
-		SDL_RenderPresent(renderer);
+        ray_cast(game_player.pos.x,game_player.pos.y, game_player.player_cam.angle, wallTexture);
+        SDL_RenderPresent(renderer);
 	}
 	return 0;
 }
