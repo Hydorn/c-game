@@ -206,7 +206,7 @@ int main(){
 	SDL_Init(SDL_INIT_VIDEO);
     window = SDL_CreateWindow("2D Map", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	wallTexture = LoadTexture("block.bmp",renderer);
+	wallTexture = LoadTexture("./assets/block.bmp",renderer);
 
     struct player game_player;
     game_player.pos.x =  SCREEN_WIDTH/8;

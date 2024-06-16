@@ -41,7 +41,7 @@ int main(){
 
     window = SDL_CreateWindow("Sprite test",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,S_W,S_H,0);
     renderer = SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    window_text = LoadTexture("sprites.bmp",renderer);
+    window_text = LoadTexture("./assets/sprites.bmp",renderer);
     int running = 1;
     SDL_Event inputsEv;
 
