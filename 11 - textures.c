@@ -43,7 +43,7 @@ struct camera {
 struct player {
     struct position pos;
     struct camera player_cam;
-};
+    };
 
 void draw_map(){
     for(int y=0; y<MAP_SIZE; y++){
@@ -171,7 +171,7 @@ void ray_cast(int x0, int y0, double angle) {
         float line_height = ray_length==0? SCREEN_HEIGHT: fabs(SCREEN_HEIGHT/(ray_length2/100)); 
         int tile_width = ceil((SCREEN_WIDTH/2)/(float)rays);
 
-
+        // Extract position in texture array
         float ty = 0;
         float tx;
         if (side){
@@ -183,6 +183,7 @@ void ray_cast(int x0, int y0, double angle) {
         }
         float ty_step = TEXTURE_SIZE/line_height;
 
+        // Drawing wall with textures
         for (int y=0; y < line_height; y++){
             float shade = side ? 1.0 : 0.5;
 
@@ -192,13 +193,17 @@ void ray_cast(int x0, int y0, double angle) {
             int blue = (hit==1?T_2:T_1)[pixel+2] * shade;
 
             SDL_SetRenderDrawColor(renderer,red,green,blue,255);
+
             if(tile_width!=1){
+
                 // Considereation to draw points when theres more pixels than rays.
                 SDL_Point points[tile_width];
+
                 for (int k = 0; k < tile_width; k++){
                     points[k].x = SCREEN_HEIGHT+(i*tile_width) + k;
                     points[k].y = (SCREEN_HEIGHT-line_height)/2 + y;
                 }
+
                 SDL_RenderDrawPoints(renderer,&points[0],tile_width);
 
             } else {
@@ -206,8 +211,8 @@ void ray_cast(int x0, int y0, double angle) {
             }
             ty += ty_step;
         }
-        
 
+   
         //Increment rayAngle for next iteration
         rayAngle = rayAngle - rayAngleIncrement;
     }
